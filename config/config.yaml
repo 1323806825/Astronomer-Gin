@@ -1,0 +1,75 @@
+server:
+  port: 8080
+  mode: debug  # debug, release, test
+
+database:
+  driver: mysql
+  host: localhost
+  port: 3306
+  username: root
+  password: root
+  dbname: astronomer
+  charset: utf8mb4
+  parse_time: true
+  max_idle_conns: 10
+  max_open_conns: 100
+
+redis:
+  addr: localhost:6379
+  password: ""
+  db: 0
+  pool_size: 10
+
+minio:
+  endpoint: localhost:9000
+  access_key: minioadmin
+  secret_key: minioadmin
+  use_ssl: false
+  bucket_name: astronomer
+  public_url: http://localhost:9000
+
+rabbitmq:
+  url: amqp://guest:guest@localhost:5672/
+  exchange_name: astronomer_exchange
+  queue_name: astronomer_queue
+  routing_key: astronomer_routing_key
+
+jwt:
+  secret_key: astronomer
+  expire_hours: 24
+
+admin:
+  username: test
+  password: test
+
+log:
+  level: debug
+  file_path: ./logs/app.log
+  max_size: 100  # MB
+  max_backups: 5
+  max_age: 30    # days
+
+elasticsearch:
+  addresses:
+    - http://localhost:9200
+  username: ""
+  password: ""
+  enabled: true
+
+# 邮件服务配置
+email:
+  enabled: true              # 是否启用邮件服务
+  smtp_host: smtp.qq.com     # SMTP服务器地址（示例：QQ邮箱）
+  smtp_port: 587             # SMTP端口（587为TLS，465为SSL）
+  username: 1323806825@qq.com        # 发件人邮箱
+  password: xcxqiyxkydkzhiaj           # 授权码（不是邮箱密码！）
+  from_name: Astronomer博客平台      # 发件人名称
+  use_ssl: false             # 是否使用SSL（587端口用false，465端口用true）
+
+  # 邮件模板配置
+  templates:
+    welcome_subject: 欢迎加入Astronomer博客平台
+    comment_subject: 您有新的评论通知
+    like_subject: 您的文章收到了新的点赞
+    follow_subject: 您有新的粉丝
+

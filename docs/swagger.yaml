@@ -1,0 +1,349 @@
+basePath: /api/v1
+definitions:
+  util.Response:
+    properties:
+      code:
+        description: 业务状态码
+        type: integer
+      data:
+        description: 业务数据
+      message:
+        description: 提示信息
+        type: string
+      request_id:
+        description: 请求追踪ID
+        type: string
+      timestamp:
+        description: 响应时间戳
+        type: integer
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@astronomer.com
+    name: API Support
+    url: https://github.com/astronomer-gin/astronomer-gin
+  description: 企业级社交博客平台API - 支持博客发布、评论互动、用户关注、通知推送等功能
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Astronomer-Gin API
+  version: 2.2.0
+paths:
+  /api/v1/upload/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 根据文件URL删除文件
+      parameters:
+      - description: 请求体
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/util.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/util.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 删除文件
+      tags:
+      - 文件上传
+  /api/v1/upload/file:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传任意类型文件，最大20MB
+      parameters:
+      - description: 文件
+        in: formData
+        name: file
+        required: true
+        type: file
+      - default: files
+        description: 文件分类
+        in: formData
+        name: category
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功返回文件URL
+          schema:
+            allOf:
+            - $ref: '#/definitions/util.Response'
+            - properties:
+                data:
+                  additionalProperties:
+                    type: string
+                  type: object
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/util.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 上传文件
+      tags:
+      - 文件上传
+  /api/v1/upload/image:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传图片文件（支持jpg, jpeg, png, gif, webp），最大5MB
+      parameters:
+      - description: 图片文件
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功返回图片URL
+          schema:
+            allOf:
+            - $ref: '#/definitions/util.Response'
+            - properties:
+                data:
+                  additionalProperties:
+                    type: string
+                  type: object
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/util.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 上传图片
+      tags:
+      - 文件上传
+  /api/v1/upload/multiple:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 一次上传多个文件，每个文件最大20MB
+      parameters:
+      - description: 文件列表
+        in: formData
+        name: files
+        required: true
+        type: file
+      - default: files
+        description: 文件分类
+        in: formData
+        name: category
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功返回文件URL列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/util.Response'
+            - properties:
+                data:
+                  items:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  type: array
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/util.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/util.Response'
+      summary: 批量上传文件
+      tags:
+      - 文件上传
+  /user/captcha:
+    get:
+      description: 生成图形验证码，返回验证码ID和Base64图片
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 返回验证码ID和图片
+          schema:
+            properties:
+              code:
+                type: integer
+              data:
+                properties:
+                  captchaId:
+                    type: string
+                  picPath:
+                    type: string
+                type: object
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            properties:
+              code:
+                type: integer
+              message:
+                type: string
+            type: object
+      summary: 获取图形验证码
+      tags:
+      - 用户模块
+  /user/login:
+    post:
+      consumes:
+      - application/json
+      description: 用户登录获取Token，可选验证码验证
+      parameters:
+      - description: 登录信息
+        in: body
+        name: request
+        required: true
+        schema:
+          properties:
+            captchaId:
+              type: string
+            captchaVal:
+              type: string
+            password:
+              type: string
+            phone:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功，返回token和用户信息
+          schema:
+            properties:
+              code:
+                type: integer
+              data:
+                properties:
+                  token:
+                    type: string
+                  userInfo:
+                    type: object
+                type: object
+              message:
+                type: string
+            type: object
+        "400":
+          description: 参数错误、验证码错误或登录失败
+          schema:
+            properties:
+              code:
+                type: integer
+              message:
+                type: string
+            type: object
+      summary: 用户登录
+      tags:
+      - 用户模块
+  /user/register:
+    post:
+      consumes:
+      - application/json
+      description: 新用户注册账号，需要提供手机号、用户名、密码和验证码
+      parameters:
+      - description: 注册信息
+        in: body
+        name: request
+        required: true
+        schema:
+          properties:
+            captchaId:
+              type: string
+            captchaVal:
+              type: string
+            password:
+              type: string
+            phone:
+              type: string
+            username:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 注册成功
+          schema:
+            properties:
+              code:
+                type: integer
+              data:
+                type: object
+              message:
+                type: string
+            type: object
+        "400":
+          description: 参数错误或验证码错误
+          schema:
+            properties:
+              code:
+                type: integer
+              message:
+                type: string
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            properties:
+              code:
+                type: integer
+              message:
+                type: string
+            type: object
+      summary: 用户注册
+      tags:
+      - 用户模块
+securityDefinitions:
+  BearerAuth:
+    description: 'JWT Token. 格式: Bearer {token}'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
+tags:
+- description: 用户注册、登录、信息管理等接口
+  name: 用户模块
+- description: 博客CRUD、点赞、草稿管理等接口
+  name: 博客模块
+- description: 评论发表、回复、点赞等接口
+  name: 评论模块
+- description: 文章收藏相关接口
+  name: 收藏模块
+- description: 用户关注、粉丝、拉黑等接口
+  name: 关注模块
+- description: 系统通知、消息推送等接口
+  name: 通知模块
+- description: 图片、文件上传相关接口
+  name: 文件上传模块
