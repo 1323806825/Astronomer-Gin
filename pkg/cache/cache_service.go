@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-redis/redis/v8"
+	redisv8 "github.com/go-redis/redis/v8"
 )
 
 // CacheService Redis缓存服务
@@ -212,7 +212,7 @@ func (s *CacheService) DecrArticleLikeCount(articleID uint64) error {
 // AddToHotRanking 添加到热门排行榜（使用ZSet）
 func (s *CacheService) AddToHotRanking(articleID uint64, score float64) error {
 	key := "ranking:hot:articles"
-	return redis.GetClient().ZAdd(s.ctx, key, &redis.Z{
+	return redis.GetClient().ZAdd(s.ctx, key, &redisv8.Z{
 		Score:  score,
 		Member: articleID,
 	}).Err()
@@ -273,7 +273,7 @@ func (s *CacheService) CheckRateLimit(key string, limit int64, window time.Durat
 	pipe.ZCard(s.ctx, key)
 
 	// 添加当前请求
-	pipe.ZAdd(s.ctx, key, &redis.Z{
+	pipe.ZAdd(s.ctx, key, &redisv8.Z{
 		Score:  float64(now),
 		Member: now,
 	})
@@ -287,7 +287,7 @@ func (s *CacheService) CheckRateLimit(key string, limit int64, window time.Durat
 	}
 
 	// 获取计数结果
-	count := cmds[1].(*redis.IntCmd).Val()
+	count := cmds[1].(*redisv8.IntCmd).Val()
 
 	return count < limit, nil
 }
@@ -304,7 +304,7 @@ func (s *CacheService) WarmupCache() error {
 // ==================== 批量操作 ====================
 
 // MGet 批量获取
-func (s *CacheService) MGet(keys []string) ([]string, error) {
+func (s *CacheService) MGet(keys []string) ([]interface{}, error) {
 	return redis.GetClient().MGet(s.ctx, keys...).Result()
 }
 
