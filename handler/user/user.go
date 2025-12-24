@@ -70,7 +70,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 			"id":       user.ID,
 			"phone":    user.Phone,
 			"username": user.Username,
-			"icon":     user.Icon,
+			"avatar":   user.Icon, // icon -> avatar（前端期望avatar字段）
 			"sex":      user.Sex,
 		},
 	})
@@ -120,7 +120,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 			"id":       user.ID,
 			"phone":    user.Phone,
 			"username": user.Username,
-			"icon":     user.Icon,
+			"avatar":   user.Icon, // icon -> avatar（前端期望avatar字段）
 			"sex":      user.Sex,
 		},
 	})
