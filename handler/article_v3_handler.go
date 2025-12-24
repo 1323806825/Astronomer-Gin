@@ -51,6 +51,13 @@ func (h *ArticleV3Handler) RegisterRoutes(r *gin.Engine) {
 			auth.PUT("/articles/:id", h.UpdateArticle)    // 更新文章
 			auth.DELETE("/articles/:id", h.DeleteArticle) // 删除文章
 
+			// 点赞和收藏
+			auth.POST("/articles/:id/like", h.LikeArticle)             // 点赞文章
+			auth.DELETE("/articles/:id/like", h.UnlikeArticle)         // 取消点赞
+			auth.POST("/articles/:id/favorite", h.FavoriteArticle)     // 收藏文章
+			auth.DELETE("/articles/:id/favorite", h.UnfavoriteArticle) // 取消收藏
+			//auth.POST("/articles/:id/share", h.ShareArticle)       // 分享文章
+
 			// 草稿管理
 			auth.POST("/drafts", h.SaveDraft)                // 保存草稿
 			auth.GET("/drafts", h.GetUserDrafts)             // 我的草稿列表
@@ -663,3 +670,90 @@ func (h *ArticleV3Handler) UnfollowTopic(c *gin.Context) {
 
 	response.Success(c, nil)
 }
+
+// ==================== 点赞和收藏接口 ====================
+
+// LikeArticle 点赞文章
+func (h *ArticleV3Handler) LikeArticle(c *gin.Context) {
+	articleID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "无效的文章ID")
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	if err := h.articleService.LikeArticle(articleID, userID.(string)); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.Success(c, nil)
+}
+
+// UnlikeArticle 取消点赞
+func (h *ArticleV3Handler) UnlikeArticle(c *gin.Context) {
+	articleID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "无效的文章ID")
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	if err := h.articleService.UnlikeArticle(articleID, userID.(string)); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.Success(c, nil)
+}
+
+// FavoriteArticle 收藏文章
+func (h *ArticleV3Handler) FavoriteArticle(c *gin.Context) {
+	articleID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "无效的文章ID")
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	if err := h.articleService.FavoriteArticle(articleID, userID.(string)); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.Success(c, nil)
+}
+
+// UnfavoriteArticle 取消收藏
+func (h *ArticleV3Handler) UnfavoriteArticle(c *gin.Context) {
+	articleID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "无效的文章ID")
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	if err := h.articleService.UnfavoriteArticle(articleID, userID.(string)); err != nil {
+		response.ServerError(c, err.Error())
+		return
+	}
+
+	response.Success(c, nil)
+}
+
+// ShareArticle 分享文章
+//func (h *ArticleV3Handler) ShareArticle(c *gin.Context) {
+//	articleID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+//	if err != nil {
+//		response.BadRequest(c, "无效的文章ID")
+//		return
+//	}
+//
+//	userID, _ := c.Get("user_id")
+//	if err := h.articleService.IncrementShareCount(articleID, userID.(string)); err != nil {
+//		response.ServerError(c, err.Error())
+//		return
+//	}
+//
+//	response.Success(c, nil)
+//}

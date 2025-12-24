@@ -125,6 +125,7 @@ func SetupRouter() *gin.Engine {
 		uploadV3Auth.Use(middleware.AuthMiddleware())
 		{
 			uploadV3Auth.POST("/image", uploadHandler.UploadImage)
+			uploadV3Auth.POST("/image-versions", uploadHandler.UploadImageWithVersions) // 多版本图片上传
 			uploadV3Auth.POST("/file", uploadHandler.UploadFile)
 			uploadV3Auth.POST("/multiple", uploadHandler.UploadMultiple)
 			uploadV3Auth.DELETE("/delete", uploadHandler.DeleteFile)

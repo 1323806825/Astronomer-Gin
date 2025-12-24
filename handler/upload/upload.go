@@ -54,6 +54,40 @@ func (h *UploadHandler) UploadImage(c *gin.Context) {
 	})
 }
 
+// UploadImageWithVersions 上传图片并生成多个版本
+// @Summary 上传图片（多版本）
+// @Description 上传图片并自动生成缩略图、中图、大图等多个版本
+// @Tags 文件上传
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "图片文件"
+// @Success 200 {object} util.Response{data=service.ImageVersions} "成功返回多版本图片URL"
+// @Failure 400 {object} util.Response "参数错误"
+// @Failure 500 {object} util.Response "服务器错误"
+// @Router /api/v1/upload/image-versions [post]
+func (h *UploadHandler) UploadImageWithVersions(c *gin.Context) {
+	// 获取上传的文件
+	file, err := c.FormFile("file")
+	if err != nil {
+		util.Error(c, constant.ErrParamInvalid.Code, "请选择要上传的图片")
+		return
+	}
+
+	// 调用服务层上传图片（多版本）
+	versions, err := h.uploadService.UploadImageWithVersions(c.Request.Context(), file)
+	if err != nil {
+		util.Error(c, constant.ErrFileUploadFailed.Code, err.Error())
+		return
+	}
+
+	// 返回成功响应
+	util.SuccessWithMessage(c, "图片上传成功", gin.H{
+		"file_name": file.Filename,
+		"file_size": file.Size,
+		"versions":  versions,
+	})
+}
+
 // UploadFile 上传文件
 // @Summary 上传文件
 // @Description 上传任意类型文件，最大20MB

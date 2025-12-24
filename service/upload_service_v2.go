@@ -19,24 +19,29 @@ import (
 // UploadServiceV2 企业级文件上传服务接口
 type UploadServiceV2 interface {
 	UploadImage(ctx context.Context, file *multipart.FileHeader) (string, error)
+	UploadImageWithVersions(ctx context.Context, file *multipart.FileHeader) (*ImageVersions, error)
 	UploadFile(ctx context.Context, file *multipart.FileHeader, category string) (string, error)
 	UploadMultiple(ctx context.Context, files []*multipart.FileHeader, category string) ([]string, error)
 	DeleteFile(ctx context.Context, fileURL string) error
 }
 
 type uploadServiceV2 struct {
-	minioClient *minioPkg.MinIOClient
-	queueClient *queue.RabbitMQClient
-	cacheHelper *util.CacheHelper
+	minioClient    *minioPkg.MinIOClient
+	queueClient    *queue.RabbitMQClient
+	cacheHelper    *util.CacheHelper
+	imageProcessor *ImageProcessor
 }
 
 // NewUploadServiceV2 创建上传服务V2实例
 func NewUploadServiceV2() UploadServiceV2 {
-	return &uploadServiceV2{
+	service := &uploadServiceV2{
 		minioClient: minioPkg.Client,
 		queueClient: queue.Client,
 		cacheHelper: util.NewCacheHelper(redis.GetClient()),
 	}
+	// 初始化图片处理器（传入自己的引用）
+	service.imageProcessor = NewImageProcessor(service)
+	return service
 }
 
 // UploadImage 上传图片（企业级实现）
@@ -53,6 +58,27 @@ func (s *uploadServiceV2) UploadImage(ctx context.Context, file *multipart.FileH
 
 	// 3. 上传文件
 	return s.uploadFileToMinio(ctx, file, "images")
+}
+
+// UploadImageWithVersions 上传图片并生成多个版本
+func (s *uploadServiceV2) UploadImageWithVersions(ctx context.Context, file *multipart.FileHeader) (*ImageVersions, error) {
+	// 1. 参数验证 - 文件类型
+	if !isImageFile(file.Filename) {
+		return nil, constant.ErrInvalidImageFormat
+	}
+
+	// 2. 参数验证 - 文件大小（5MB）
+	if file.Size > constant.MaxImageSize {
+		return nil, constant.ErrImageSizeExceeded
+	}
+
+	// 3. 处理并上传多个版本
+	versions, err := s.imageProcessor.ProcessAndUploadImage(ctx, file)
+	if err != nil {
+		return nil, fmt.Errorf("处理图片失败: %w", err)
+	}
+
+	return versions, nil
 }
 
 // UploadFile 上传文件（企业级实现）
