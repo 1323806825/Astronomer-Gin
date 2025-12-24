@@ -288,7 +288,11 @@ func (r *articleV3Repository) FindList(params *ArticleQueryParams) ([]model.Arti
 	}
 	if params.Keyword != "" {
 		likeKeyword := "%" + params.Keyword + "%"
-		query = query.Where("title LIKE ? OR summary LIKE ?", likeKeyword, likeKeyword)
+		// 在标题、摘要、标签、话题中搜索关键词
+		query = query.Where(
+			"title LIKE ? OR summary LIKE ? OR tags LIKE ? OR topics LIKE ?",
+			likeKeyword, likeKeyword, likeKeyword, likeKeyword,
+		)
 	}
 
 	// 获取总数
