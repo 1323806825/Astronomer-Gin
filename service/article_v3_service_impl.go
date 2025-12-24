@@ -3,8 +3,11 @@ package service
 import (
 	"astronomer-gin/model"
 	"astronomer-gin/pkg/constant"
+	"astronomer-gin/pkg/redis"
 	"astronomer-gin/repository"
+	"context"
 	"fmt"
+	"log"
 	"math"
 	"time"
 )
@@ -552,16 +555,48 @@ func (s *articleV3Service) UnfavoriteArticle(articleID uint64, userID string) er
 
 // IncrementViewCount 增加浏览量
 func (s *articleV3Service) IncrementViewCount(articleID uint64, userID string) error {
-	// 1. 增加总浏览量
+	// 0. 检查是否是作者访问自己的文章（作者访问不计入浏览量）
+	if userID != "" {
+		article, err := s.articleRepo.FindByID(articleID)
+		if err == nil && article.UserID == userID {
+			log.Printf("ℹ️  作者访问自己的文章（不计入浏览量）: ArticleID=%d, AuthorID=%s", articleID, userID)
+			return nil
+		}
+	}
+
+	// 1. 总是增加总浏览量（包括未登录和登录用户的所有访问）
 	if err := s.articleRepo.IncrementViewCount(articleID); err != nil {
 		return err
 	}
 
-	// 2. 如果是已登录用户，增加真实浏览量（去重）
+	// 2. 如果是已登录用户，使用Redis进行24小时去重后增加真实浏览量
 	if userID != "" {
-		// TODO: 使用Redis记录用户浏览历史，24小时内同一用户多次浏览只计数一次
-		// 当前简单实现：直接增加计数，Redis去重功能待后续优化
-		s.articleRepo.IncrementRealViewCount(articleID)
+		// 构造Redis key: article:view:{articleID}:users
+		redisKey := fmt.Sprintf("article:view:%d:users", articleID)
+
+		// 使用SADD尝试将用户ID添加到集合
+		// 返回值：1表示是新成员（第一次浏览），0表示成员已存在（24小时内已浏览过）
+		added, err := redis.GetClient().SAdd(context.Background(), redisKey, userID).Result()
+		if err != nil {
+			log.Printf("⚠️  Redis SADD失败: key=%s, userID=%s, error=%v", redisKey, userID, err)
+			// Redis失败不影响主流程，仍然增加计数
+			s.articleRepo.IncrementRealViewCount(articleID)
+			return nil
+		}
+
+		// 如果是新用户浏览（24小时内第一次），增加真实浏览量
+		if added > 0 {
+			if err := s.articleRepo.IncrementRealViewCount(articleID); err != nil {
+				log.Printf("⚠️  增加真实浏览量失败: articleID=%d, error=%v", articleID, err)
+			}
+
+			// 设置key的过期时间为24小时
+			redis.GetClient().Expire(context.Background(), redisKey, 24*time.Hour)
+
+			log.Printf("✅ 文章浏览量+1: ArticleID=%d, UserID=%s (24小时内首次)", articleID, userID)
+		} else {
+			log.Printf("ℹ️  重复浏览（已去重）: ArticleID=%d, UserID=%s", articleID, userID)
+		}
 	}
 
 	return nil

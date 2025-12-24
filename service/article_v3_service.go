@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/russross/blackfriday/v2"
 	"gorm.io/gorm"
+	"log"
 	"time"
 )
 
@@ -546,7 +547,14 @@ func (s *articleV3Service) GetArticleDetail(articleID uint64, viewerID string) (
 		return nil, constant.ErrPermissionDenied
 	}
 
-	// 3. 获取作者信息
+	// 3. 异步增加阅读量（不影响响应速度）
+	go func() {
+		if err := s.IncrementViewCount(articleID, viewerID); err != nil {
+			log.Printf("⚠️  增加文章阅读量失败: ArticleID=%d, Error=%v", articleID, err)
+		}
+	}()
+
+	// 4. 获取作者信息
 	author, _ := s.userRepo.FindByID(article.UserID)
 	authorName := "未知"
 	authorAvatar := ""
@@ -557,7 +565,7 @@ func (s *articleV3Service) GetArticleDetail(articleID uint64, viewerID string) (
 		authorBio = author.Intro
 	}
 
-	// 4. 获取分类
+	// 5. 获取分类
 	var categories []map[string]interface{}
 	if article.CategoryID > 0 {
 		if cat, err := s.articleRepo.FindCategoryByID(article.CategoryID); err == nil {
@@ -569,7 +577,7 @@ func (s *articleV3Service) GetArticleDetail(articleID uint64, viewerID string) (
 		}
 	}
 
-	// 5. 获取相关文章（带作者信息）
+	// 6. 获取相关文章（带作者信息）
 	relatedArticlesRaw, _ := s.articleRepo.FindRelatedArticles(articleID, 5)
 	relatedArticles := make([]ArticleListItem, 0, len(relatedArticlesRaw))
 	for _, relArticle := range relatedArticlesRaw {
@@ -587,7 +595,7 @@ func (s *articleV3Service) GetArticleDetail(articleID uint64, viewerID string) (
 		})
 	}
 
-	// 6. 检查用户互动状态
+	// 7. 检查用户互动状态
 	isLiked := false
 	isFavorited := false
 	isFollowing := false
@@ -597,7 +605,7 @@ func (s *articleV3Service) GetArticleDetail(articleID uint64, viewerID string) (
 		isFollowing = s.followRepo.IsFollowing(viewerID, article.UserID)
 	}
 
-	// 7. 格式化时间
+	// 8. 格式化时间
 	createTime := ""
 	updateTime := ""
 	publishTime := ""
@@ -611,7 +619,7 @@ func (s *articleV3Service) GetArticleDetail(articleID uint64, viewerID string) (
 		publishTime = article.PublishTime.Format("2006-01-02 15:04:05")
 	}
 
-	// 8. 返回扁平化结构
+	// 9. 返回扁平化结构
 	return &ArticleDetailResponse{
 		// 文章基本信息
 		ID:            article.ID,
