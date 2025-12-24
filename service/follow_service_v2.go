@@ -132,6 +132,10 @@ func (s *followServiceV2) FollowUser(userID, followUserID string, username strin
 	s.ClearFollowCache(userID)
 	s.ClearFollowCache(followUserID)
 
+	// 8. 清除双方用户信息缓存（因为following_count和followed_count已更新）
+	s.cacheHelper.Delete(fmt.Sprintf("%s%s", constant.CacheKeyUserInfo, userID))
+	s.cacheHelper.Delete(fmt.Sprintf("%s%s", constant.CacheKeyUserInfo, followUserID))
+
 	return nil
 }
 
@@ -172,6 +176,10 @@ func (s *followServiceV2) UnfollowUser(userID, followUserID string) error {
 	// 3. 清除相关缓存
 	s.ClearFollowCache(userID)
 	s.ClearFollowCache(followUserID)
+
+	// 4. 清除双方用户信息缓存（因为following_count和followed_count已更新）
+	s.cacheHelper.Delete(fmt.Sprintf("%s%s", constant.CacheKeyUserInfo, userID))
+	s.cacheHelper.Delete(fmt.Sprintf("%s%s", constant.CacheKeyUserInfo, followUserID))
 
 	return nil
 }

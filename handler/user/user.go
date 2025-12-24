@@ -126,6 +126,28 @@ func (h *UserHandler) Login(c *gin.Context) {
 	})
 }
 
+// Logout 用户登出
+// @Summary 用户登出
+// @Description 用户登出，清除服务端会话信息
+// @Tags 用户模块
+// @Produce json
+// @Security Bearer
+// @Success 200 {object} object{code=int,message=string} "登出成功"
+// @Router /user/logout [post]
+func (h *UserHandler) Logout(c *gin.Context) {
+	// 从上下文获取用户信息（由JWT中间件设置）
+	userID, exists := c.Get("userID")
+	if exists {
+		// 这里可以添加清除Redis会话、黑名单Token等逻辑
+		// 例如：将token加入黑名单，或清除用户的会话缓存
+		_ = userID // 暂时未使用，但保留以便后续扩展
+	}
+
+	// 前端通常会自己清除localStorage中的token
+	// 后端主要用于记录登出日志或处理服务端会话
+	util.SuccessWithMessage(c, "登出成功", nil)
+}
+
 // GetCaptcha 获取验证码
 // @Summary 获取图形验证码
 // @Description 生成图形验证码，返回验证码ID和Base64图片

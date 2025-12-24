@@ -14,7 +14,7 @@ import (
 type ArticleV3Service interface {
 	// ==================== 文章发布 ====================
 	// 创建并发布文章
-	CreateArticle(req *CreateArticleRequest) (*model.ArticleV3, error)
+	CreateArticle(userID string, req *CreateArticleRequest) (*model.ArticleV3, error)
 	// 更新文章
 	UpdateArticle(articleID uint64, userID string, req *UpdateArticleRequest) error
 	// 删除文章（软删除）
@@ -334,7 +334,7 @@ func NewArticleV3Service(
 // ==================== 文章发布实现 ====================
 
 // CreateArticle 创建并发布文章
-func (s *articleV3Service) CreateArticle(req *CreateArticleRequest) (*model.ArticleV3, error) {
+func (s *articleV3Service) CreateArticle(userID string, req *CreateArticleRequest) (*model.ArticleV3, error) {
 	// 1. 参数验证
 	if err := s.validateArticleContent(req.Title, req.Content); err != nil {
 		return nil, err
@@ -348,6 +348,7 @@ func (s *articleV3Service) CreateArticle(req *CreateArticleRequest) (*model.Arti
 	// 3. 构建文章对象
 	now := time.Now()
 	article := &model.ArticleV3{
+		UserID:      userID, // 设置作者ID
 		Title:       req.Title,
 		Summary:     req.Summary,
 		CoverImage:  req.CoverImage,

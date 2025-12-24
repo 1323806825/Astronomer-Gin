@@ -56,8 +56,14 @@ func (h *SearchHandler) SearchUsers(c *gin.Context) {
 		return
 	}
 
+	// 获取当前登录用户ID（如果已登录）
+	var currentUserID string
+	if userID, exists := c.Get("user_id"); exists {
+		currentUserID = userID.(string)
+	}
+
 	// 搜索用户
-	users, total, err := h.searchService.SearchUsers(keyword, page, pageSize)
+	users, total, err := h.searchService.SearchUsers(keyword, page, pageSize, currentUserID)
 	if err != nil {
 		util.InternalServerError(c, err.Error())
 		return
@@ -83,8 +89,14 @@ func (h *SearchHandler) SearchAll(c *gin.Context) {
 		return
 	}
 
+	// 获取当前登录用户ID（如果已登录）
+	var currentUserID string
+	if userID, exists := c.Get("user_id"); exists {
+		currentUserID = userID.(string)
+	}
+
 	// 综合搜索
-	result, err := h.searchService.SearchAll(keyword, page, pageSize)
+	result, err := h.searchService.SearchAll(keyword, page, pageSize, currentUserID)
 	if err != nil {
 		util.InternalServerError(c, err.Error())
 		return

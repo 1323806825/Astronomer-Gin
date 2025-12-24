@@ -17,24 +17,26 @@ type SearchServiceV2 interface {
 	// 搜索文章
 	SearchArticles(keyword string, page, pageSize int) ([]model.Article, int64, error)
 
-	// 搜索用户
-	SearchUsers(keyword string, page, pageSize int) ([]model.User, int64, error)
+	// 搜索用户（带关注状态）
+	SearchUsers(keyword string, page, pageSize int, currentUserID string) ([]model.User, int64, error)
 
 	// 综合搜索
-	SearchAll(keyword string, page, pageSize int) (map[string]interface{}, error)
+	SearchAll(keyword string, page, pageSize int, currentUserID string) (map[string]interface{}, error)
 }
 
 type searchServiceV2 struct {
 	blogRepo    repository.BlogRepository
 	userRepo    repository.UserRepository
+	followRepo  repository.FollowRepository
 	cacheHelper *util.CacheHelper
 }
 
 // NewSearchServiceV2 创建搜索服务V2实例
-func NewSearchServiceV2(blogRepo repository.BlogRepository, userRepo repository.UserRepository) SearchServiceV2 {
+func NewSearchServiceV2(blogRepo repository.BlogRepository, userRepo repository.UserRepository, followRepo repository.FollowRepository) SearchServiceV2 {
 	return &searchServiceV2{
 		blogRepo:    blogRepo,
 		userRepo:    userRepo,
+		followRepo:  followRepo,
 		cacheHelper: util.NewCacheHelper(redis.GetClient()),
 	}
 }
@@ -132,8 +134,8 @@ func (s *searchServiceV2) searchArticlesFromMySQL(keyword string, page, pageSize
 	return cached.Articles, cached.Total, nil
 }
 
-// SearchUsers 搜索用户（带缓存）
-func (s *searchServiceV2) SearchUsers(keyword string, page, pageSize int) ([]model.User, int64, error) {
+// SearchUsers 搜索用户（带缓存和关注状态）
+func (s *searchServiceV2) SearchUsers(keyword string, page, pageSize int, currentUserID string) ([]model.User, int64, error) {
 	// 1. 参数验证
 	if keyword == "" {
 		return nil, 0, constant.ErrParamInvalid
@@ -146,45 +148,35 @@ func (s *searchServiceV2) SearchUsers(keyword string, page, pageSize int) ([]mod
 		pageSize = constant.DefaultPageSize
 	}
 
-	// 2. 构建缓存键
-	cacheKey := fmt.Sprintf("search:user:%s:page:%d:size:%d", keyword, page, pageSize)
-
-	// 3. 尝试从缓存获取
-	type CachedData struct {
-		Users []model.User
-		Total int64
-	}
-
-	var cached CachedData
-	err := s.cacheHelper.GetOrSet(
-		cacheKey,
-		&cached,
-		time.Duration(constant.CacheExpireShort)*time.Second,
-		func() (interface{}, error) {
-			// 从数据库搜索
-			users, total, err := s.userRepo.SearchUsers(keyword, page, pageSize)
-			if err != nil {
-				return nil, err
-			}
-
-			// 数据脱敏
-			for i := range users {
-				users[i].Phone = util.MaskPhone(users[i].Phone)
-			}
-
-			return CachedData{Users: users, Total: total}, nil
-		},
-	)
-
+	// 2. 从数据库搜索（不使用缓存，因为关注状态因人而异）
+	users, total, err := s.userRepo.SearchUsers(keyword, page, pageSize)
 	if err != nil {
 		return nil, 0, constant.ErrDatabaseQuery
 	}
 
-	return cached.Users, cached.Total, nil
+	// 3. 数据脱敏
+	for i := range users {
+		users[i].Phone = util.MaskPhone(users[i].Phone)
+	}
+
+	// 4. 如果用户已登录，检查关注状态
+	if currentUserID != "" {
+		for i := range users {
+			// 跳过自己
+			if users[i].ID == currentUserID {
+				users[i].IsFollowed = false
+				continue
+			}
+			// 检查是否关注
+			users[i].IsFollowed = s.followRepo.IsFollowing(currentUserID, users[i].ID)
+		}
+	}
+
+	return users, total, nil
 }
 
 // SearchAll 综合搜索（文章+用户）
-func (s *searchServiceV2) SearchAll(keyword string, page, pageSize int) (map[string]interface{}, error) {
+func (s *searchServiceV2) SearchAll(keyword string, page, pageSize int, currentUserID string) (map[string]interface{}, error) {
 	// 1. 参数验证
 	if keyword == "" {
 		return nil, constant.ErrParamInvalid
@@ -221,7 +213,7 @@ func (s *searchServiceV2) SearchAll(keyword string, page, pageSize int) (map[str
 
 	// 搜索用户
 	go func() {
-		users, total, err := s.SearchUsers(keyword, page, pageSize)
+		users, total, err := s.SearchUsers(keyword, page, pageSize, currentUserID)
 		userChan <- UserResult{Users: users, Total: total, Err: err}
 	}()
 

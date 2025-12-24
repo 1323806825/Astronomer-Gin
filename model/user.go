@@ -21,6 +21,9 @@ type User struct {
 	FollowingCount int64      `json:"followingCount" gorm:"column:following_count;comment:'关注数量';default:0;not null"`
 	FollowedCount  int64      `json:"followedCount" gorm:"column:followed_count;comment:'被关注数量';default:0;not null"`
 	CreateTime     *time.Time `json:"createTime" gorm:"column:create_time;comment:'创建时间';not null"`
+
+	// 非数据库字段
+	IsFollowed bool `json:"isFollowed" gorm:"-"` // 当前用户是否已关注此用户
 }
 
 // BeforeCreate 创建前钩子 - 自动生成UUID

@@ -61,7 +61,7 @@ func SetupRouter() *gin.Engine {
 	followService := service.NewFollowServiceV2(followRepo, userRepo, notifyRepo)
 	notifyService := service.NewNotificationServiceV2(notifyRepo)
 	uploadService := service.NewUploadServiceV2()
-	searchService := service.NewSearchServiceV2(blogRepo, userRepo)
+	searchService := service.NewSearchServiceV2(blogRepo, userRepo, followRepo)
 	trendingService := service.NewTrendingServiceV2(blogRepo, userRepo)
 	chatService := service.NewChatServiceV2(chatRepo, followRepo, userRepo)
 
@@ -85,13 +85,6 @@ func SetupRouter() *gin.Engine {
 	articleV3Handler := handler.NewArticleV3Handler(articleV3Service)
 	commentV3Handler := handler.NewCommentV3Handler(commentV3Service)
 	columnHandler := handler.NewColumnHandler(columnService)
-
-	// 健康检查
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status": "ok",
-		})
-	})
 
 	// Swagger文档路由
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -118,6 +111,7 @@ func SetupRouter() *gin.Engine {
 			userV3Auth.GET("/current", userHandler.GetUserInfo) // 获取当前登录用户信息
 			userV3Auth.GET("/info", userHandler.GetUserInfo)
 			userV3Auth.PUT("/update", userHandler.UpdateUserInfo)
+			userV3Auth.POST("/logout", userHandler.Logout) // 用户登出
 		}
 
 		// 用户公开路由（动态路由，必须在静态路由之后）

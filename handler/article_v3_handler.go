@@ -26,8 +26,11 @@ func (h *ArticleV3Handler) RegisterRoutes(r *gin.Engine) {
 	v3 := r.Group("/api/v3")
 	{
 		// 公开接口（无需认证）
-		v3.GET("/articles", h.GetArticleList)                // 文章列表
-		v3.GET("/articles/:id", h.GetArticleDetail)          // 文章详情
+		v3.GET("/articles", h.GetArticleList) // 文章列表
+
+		// 文章详情（支持可选认证：如果已登录，会返回关注/点赞/收藏状态）
+		v3.GET("/articles/:id", middleware.OptionalAuthMiddleware(), h.GetArticleDetail)
+
 		v3.GET("/articles/:id/history", h.GetArticleHistory) // 文章历史版本
 
 		// 分类相关
@@ -78,14 +81,13 @@ func (h *ArticleV3Handler) CreateArticle(c *gin.Context) {
 	}
 
 	// 从JWT中获取用户ID
-	//userID, exists := c.Get("user_id")
-	//if !exists {
-	//	response.Unauthorized(c, "未登录")
-	//	return
-	//}
-	//req.UserID = userID.(uint64)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		response.Unauthorized(c, "未登录")
+		return
+	}
 
-	article, err := h.articleService.CreateArticle(&req)
+	article, err := h.articleService.CreateArticle(userID.(string), &req)
 	if err != nil {
 		response.ServerError(c, err.Error())
 		return
@@ -164,6 +166,9 @@ func (h *ArticleV3Handler) GetArticleList(c *gin.Context) {
 		SortBy:     c.DefaultQuery("sort_by", "hot"),
 		CategoryID: parseUint64(c.Query("category_id")),
 		ColumnID:   parseUint64(c.Query("column_id")),
+		TopicID:    parseUint64(c.Query("topic_id")),
+		UserID:     c.Query("user_id"),
+		Keyword:    c.Query("keyword"),
 		Status:     parseInt8(c.Query("status")),
 	}
 
